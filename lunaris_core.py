@@ -168,7 +168,7 @@ class LunarisEngine:
         if any(w in lower for w in ["hello", "hi", "hey", "who are you", "what are you", "what can you do"]):
             return (
                 f"Thought: The user is greeting or asking for an introduction.\n"
-                f"Final Answer: 🌕 **Hello! I am Lunaris AI.**\n\n"
+                f"Final Answer: **[Lunaris AI] Hello! I am Lunaris AI.**\n\n"
                 f"I am your sovereign, air-gapped private intelligence assistant. Here is what I can do for you right now:\n\n"
                 f"1. **Autonomous ReAct Reasoning**: I break down complex problems and use tools step-by-step.\n"
                 f"2. **Local Vector Search (RAG)**: Ask questions about documents dropped into `documents/`.\n"
