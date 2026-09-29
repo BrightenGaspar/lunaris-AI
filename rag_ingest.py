@@ -294,9 +294,10 @@ class DocumentIngestionEngine:
         for file in dir_obj.glob(pattern):
             if file.is_file() and file.suffix.lower() in SUPPORTED_EXTENSIONS:
                 try:
-                    res = self.ingest_file(str(file))
-                    results.append(res)
-                    print(f"[{res.get('status').upper()}] {file.name}: {res.get('message', f'Indexed {res.get(\"chunks_indexed\")} chunks')}")
+                    res_status = str(res.get('status', 'info')).upper()
+                    chunks_count = res.get('chunks_indexed', 0)
+                    msg = res.get('message', f'Indexed {chunks_count} chunks')
+                    print(f"[{res_status}] {file.name}: {msg}")
                 except Exception as e:
                     print(f"[ERROR] Failed to ingest {file.name}: {e}")
                     results.append({"status": "error", "file": file.name, "error": str(e)})

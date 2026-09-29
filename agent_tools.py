@@ -2,8 +2,6 @@ import os
 import json
 import math
 import requests
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from typing import Dict, Any, List
 from sandbox import CodeExecutionSandbox
 
@@ -31,13 +29,15 @@ class LunarisToolRegistry:
             res = requests.post(f"{OLLAMA_URL}/api/embeddings", json={"model": EMBED_MODEL, "prompt": text}, timeout=15)
             res.raise_for_status()
             return res.json().get("embedding", [])
-        except Exception as e:
+        except Exception:
             return [0.0] * 768
 
     @classmethod
     def search_documents(cls, query: str, top_k: int = 4) -> str:
         """Searches indexed documents in pgvector using semantic cosine similarity."""
         try:
+            import psycopg2
+            from psycopg2.extras import RealDictCursor
             query_vector = cls.get_embedding(query)
             conn = psycopg2.connect(**DB_CONFIG)
             sql = """
@@ -60,7 +60,7 @@ class LunarisToolRegistry:
                 formatted.append(f"[{i+1}] Source: '{r['title']}' (Similarity: {sim})\n{r['chunk_text']}")
             return "\n\n---\n\n".join(formatted)
         except Exception as e:
-            return f"Document search error: {e}"
+            return f"Document vector database offline or connecting: {e}"
 
     @staticmethod
     def web_search(query: str, limit: int = 4) -> str:
@@ -80,11 +80,11 @@ class LunarisToolRegistry:
                 formatted.append(f"• Title: {title}\n  URL: {url}\n  Snippet: {snippet}")
             return "\n\n".join(formatted)
         except Exception as e:
-            return f"Web search currently unavailable or offline ({e})."
+            return f"SearXNG metasearch offline or connecting: {e}"
 
     @staticmethod
     def execute_python_sandbox(code: str) -> str:
-        """Executes untrusted Python code inside an isolated, air-gapped Docker container."""
+        """Executes untrusted Python code inside an isolated sandbox."""
         res = sandbox_instance.execute_python(code)
         if res["status"] == "success":
             return f"[Execution Output]:\n{res['output']}"
@@ -97,7 +97,6 @@ class LunarisToolRegistry:
     def calculate_math(expression: str) -> str:
         """Safely evaluates mathematical expressions."""
         try:
-            # Safe math environment
             allowed_names = {
                 k: v for k, v in math.__dict__.items() if not k.startswith("__")
             }
@@ -115,6 +114,8 @@ class LunarisToolRegistry:
     def list_knowledge_base() -> str:
         """Lists all documents currently indexed in the local vector database."""
         try:
+            import psycopg2
+            from psycopg2.extras import RealDictCursor
             conn = psycopg2.connect(**DB_CONFIG)
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
@@ -130,7 +131,7 @@ class LunarisToolRegistry:
             items = [f"• {r['title']} ({r['file_type']}) - {r['chunks']} chunks" for r in rows]
             return "Indexed Documents in Lunaris AI:\n" + "\n".join(items)
         except Exception as e:
-            return f"Database query error: {e}"
+            return f"Database query note: {e}"
 
     @staticmethod
     def generate_image(prompt: str) -> str:
@@ -142,37 +143,37 @@ class LunarisToolRegistry:
             res.raise_for_status()
             import base64
             img_b64 = res.json()["images"][0]
-            output_file = f"gen_{int(time.time())}.png"
+            output_file = f"gen_output.png"
             with open(output_file, "wb") as f:
                 f.write(base64.b64decode(img_b64))
-            return f"Image successfully generated and saved to {output_file}"
+            return f"Image successfully saved to {output_file}"
         except Exception as e:
-            return f"Image generation failed: {e}"
+            return f"Image generation unavailable: {e}"
 
 TOOL_DEFINITIONS = [
     {
         "name": "search_documents",
-        "description": "Searches local internal documents and knowledge base using semantic vector search. Use this whenever the user asks about indexed local information, files, or documentation.",
+        "description": "Searches local internal documents and knowledge base using semantic vector search.",
         "parameters": {"query": "string"}
     },
     {
         "name": "web_search",
-        "description": "Searches the live public internet using private SearXNG. Use when you need real-time data, news, current events, or general external information.",
+        "description": "Searches the live public internet using private SearXNG.",
         "parameters": {"query": "string"}
     },
     {
         "name": "execute_python_sandbox",
-        "description": "Executes Python code in a secure, sandboxed Docker container. Use this for complex data processing, calculations, testing algorithms, or data transformation.",
+        "description": "Executes Python code in a secure sandbox.",
         "parameters": {"code": "string"}
     },
     {
         "name": "calculate_math",
-        "description": "Evaluates pure mathematical expressions (e.g. 'sqrt(144) * 3.14159', '2**16', 'sin(pi/4)').",
+        "description": "Evaluates pure mathematical expressions (e.g. 'sqrt(144) * 3.14159', '2**16').",
         "parameters": {"expression": "string"}
     },
     {
         "name": "list_knowledge_base",
-        "description": "Returns a list of all documents and files currently indexed in the Lunaris knowledge base.",
+        "description": "Returns a list of all documents currently indexed in the Lunaris knowledge base.",
         "parameters": {}
     }
 ]
