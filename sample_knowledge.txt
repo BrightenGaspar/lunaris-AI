@@ -1,0 +1,3 @@
+Lunaris AI is a sovereign, self-hosted artificial intelligence platform designed for complete data privacy.
+It integrates local LLM inference via Ollama, pgvector semantic search, private metasearch via SearXNG,
+and an isolated Docker sandbox for safe code execution.

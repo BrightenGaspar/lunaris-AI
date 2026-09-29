@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # 1. Local LLM & Embedding Engine
+  ollama:
+    image: ollama/ollama:latest
+    container_name: lunaris_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # 2. Vector DB & Long-Term Memory
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: lunaris_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-lunaris}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-lunaris_secure_password}
+      POSTGRES_DB: ${DB_NAME:-lunaris_ai}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+  # 3. Privacy-Preserving Metasearch
+  searxng:
+    image: searxng/searxng:latest
+    container_name: lunaris_search
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./searxng:/etc/searxng
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8080/
+    restart: unless-stopped
+
+  # 4. Open-Source AI Web Interface
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: lunaris_ui
+    ports:
+      - "3000:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET:-lunaris_super_secret_key}
+    volumes:
+      - open_webui_data:/app/backend/data
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+  postgres_data:
+  open_webui_data:
