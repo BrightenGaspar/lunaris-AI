@@ -45,7 +45,7 @@ services:
       - SEARXNG_BASE_URL=http://localhost:8080/
     restart: unless-stopped
 
-  # 4. Open-Source AI Web Interface
+  # 4. Open-Source AI Web Interface (Optional)
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: lunaris_ui

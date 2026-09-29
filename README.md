@@ -2,11 +2,12 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black.svg?logo=next.js)](https://nextjs.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker)](https://www.docker.com/)
 [![Ollama](https://img.shields.io/badge/Ollama-Local_Inference-black.svg)](https://ollama.com/)
 [![pgvector](https://img.shields.io/badge/pgvector-PostgreSQL-336791.svg?logo=postgresql)](https://github.com/pgvector/pgvector)
 
-**Lunaris AI** is a fully sovereign, self-hosted, private intelligence platform designed with zero external cloud dependencies. It unifies local Large Language Models (LLMs), high-speed vector retrieval with `pgvector`, autonomous ReAct multi-step tool reasoning, live document folder monitoring, private internet metasearch with SearXNG, and ephemeral sandboxed code execution.
+**Lunaris AI** is a sovereign, self-hosted, private intelligence platform designed with zero external cloud dependencies. It unifies local Large Language Models (LLMs), high-speed vector retrieval with `pgvector`, autonomous ReAct multi-step tool reasoning, live document folder monitoring, air-gapped voice interaction (Whisper + TTS), Telegram & Discord connectors, and a dedicated Next.js web application.
 
 ---
 
@@ -14,38 +15,41 @@
 
 ```mermaid
 graph TD
-    Client["Client Interface (OpenWebUI / FastAPI Swagger / Custom App)"] --> Gateway["FastAPI Gateway (main.py)"]
+    User["Client Interfaces (Next.js Dashboard / Telegram / Discord)"] --> Gateway["FastAPI Gateway (main.py)"]
     Gateway --> Auth["Bearer Token Auth Guardrail"]
     Gateway --> ReActAgent["Autonomous ReAct Agent (lunaris_core.py)"]
     
-    subgraph ReAct Loop (Thought -> Action -> Observation)
+    subgraph ReAct Tool Execution Loop
         ReActAgent -->|1. Vector Search| ToolDoc["search_documents (pgvector)"]
         ReActAgent -->|2. Web Metasearch| ToolWeb["web_search (SearXNG)"]
         ReActAgent -->|3. Sandboxed Eval| ToolCode["execute_python_sandbox (Docker)"]
         ReActAgent -->|4. Arithmetic| ToolMath["calculate_math"]
-        ReActAgent -->|5. Memory / Stats| ToolList["list_knowledge_base"]
+        ReActAgent -->|5. Catalog Inspection| ToolList["list_knowledge_base"]
     end
 
-    subgraph Document Ingestion Pipeline
-        Watcher["Live Folder Watcher (watcher.py)"] -->|Watches ./documents/| Ingest["Multi-Format Parser (rag_ingest.py)"]
-        Ingest -->|PDF, DOCX, CSV, MD, Code| Chunker["Semantic Chunker"]
-        Chunker -->|Vector Embeddings| Ollama["Ollama (nomic-embed-text)"]
+    subgraph Sovereign Pipelines
+        Watcher["Live Watcher (watcher.py)"] -->|Watches ./documents/| Ingest["Multi-Format Parser (rag_ingest.py)"]
+        Ingest -->|PDF, DOCX, CSV, MD, Code| Chunker["Semantic Chunker + SHA256"]
+        Chunker -->|Dense Vector Embeddings| Ollama["Ollama (nomic-embed-text)"]
         Chunker -->|HNSW Cosine Index| Postgres["PostgreSQL 16 + pgvector"]
+        Voice["Voice Engine (voice_engine.py)"] -->|STT| Whisper["Local Whisper"]
+        Voice -->|TTS| Piper["Local Speech TTS"]
     end
 ```
 
 ---
 
-## 🚀 Key Features
+## 🚀 Complete Feature Set
 
-- **🛡️ 100% Data Sovereignty**: All inference, embedding, and vector storage run locally on your hardware.
-- **🤖 Autonomous ReAct Reasoning**: Multi-step Thought $\rightarrow$ Action $\rightarrow$ Observation reasoning loop capable of using multiple tools in sequence.
-- **📂 Multi-Format Ingestion Engine**: Native parsing and chunking for **PDF, DOCX, CSV, JSON, Markdown, Text, and source code files**.
-- **👁️ Live Folder Watcher**: Background daemon that continuously watches `./documents/`, automatically detecting additions, modifications, and deletions.
-- **⚡ Local Vector RAG**: Fast Approximate Nearest Neighbor search using PostgreSQL `pgvector` with HNSW cosine distance indexing and SHA-256 deduplication.
-- **🔍 Privacy-Preserving Metasearch**: Real-time web groundings via self-hosted SearXNG without user tracking.
+- **🛡️ 100% Data Sovereignty**: All inference, embedding, voice, and vector storage run completely offline on your hardware.
+- **🎨 Dedicated Next.js Web App**: Dark celestial dashboard with real-time reasoning trace accordions, document manager, sandbox terminal, and voice mic.
+- **🤖 Autonomous ReAct Reasoning**: Multi-step Thought $\rightarrow$ Action $\rightarrow$ Observation reasoning loop capable of chaining multiple tools in sequence.
+- **🎙️ Air-Gapped Voice (STT & TTS)**: Talk to Lunaris via microphone and receive natural synthesized speech responses offline.
+- **💬 Telegram & Discord Bots**: Interact with your sovereign AI from your smartphone or team chat with voice note and document upload support.
+- **📂 Multi-Format Ingestion**: Native parsing and chunking for **PDF, DOCX, CSV, JSON, Markdown, Text, and source code files**.
+- **👁️ Live Folder Watcher**: Background daemon monitoring `./documents/` for instant vector indexing and automatic deletion syncing.
+- **⚡ Fast Vector RAG**: PostgreSQL `pgvector` with HNSW cosine distance indexing and SHA-256 deduplication.
 - **🔒 Air-Gapped Code Sandbox**: Resource-capped, non-networked Docker container execution for untrusted Python code.
-- **🔑 Production API Gateway**: Token-authenticated REST API with OpenAPI documentation and multipart document uploads.
 
 ---
 
@@ -53,17 +57,24 @@ graph TD
 
 ```
 lunaris-ai/
+├── frontend/              # Dedicated Next.js & Tailwind CSS Web Application
+│   ├── app/               # App Router & page layout
+│   ├── components/        # UI components (ReasoningTrace, DocumentManager, SandboxRunner, VoiceRecorder)
+│   └── package.json
 ├── documents/             # Drop zone for auto-ingested documents (PDF, DOCX, CSV, MD, Code)
 │   ├── sample_architecture.md
 │   ├── company_metrics.csv
 │   └── sample_python_code.py
-├── docker-compose.yml     # Complete container stack (Ollama, pgvector, SearXNG, OpenWebUI)
+├── docker-compose.yml     # Container stack (Ollama, pgvector, SearXNG, OpenWebUI)
 ├── init.sql               # Database schema with pgvector & conversation memory
 ├── lunaris_core.py        # Central Autonomous ReAct reasoning engine
 ├── agent_tools.py         # Registry of agent tools (vector search, web search, sandbox, math)
 ├── sandbox.py             # Docker-based isolated code execution sandbox
 ├── rag_ingest.py          # Multi-format document parser & vector ingestion pipeline
 ├── watcher.py             # Live folder watcher daemon for real-time document indexing
+├── voice_engine.py        # Air-gapped Speech-to-Text & Text-to-Speech engine
+├── telegram_bot.py        # Telegram bot connector with voice and document support
+├── discord_bot.py         # Discord bot connector with attachment parsing
 ├── main.py                # FastAPI production REST gateway
 ├── requirements.txt       # Python dependencies
 ├── .env.example           # Environment configuration template
@@ -77,7 +88,7 @@ lunaris-ai/
 ### 1. Prerequisites
 - [Docker](https://docs.docker.com/get-docker/) & Docker Compose
 - [Python 3.10+](https://www.python.org/)
-- *(Optional)* NVIDIA GPU with CUDA support for accelerated local inference.
+- [Node.js 18+](https://nodejs.org/) (for custom Next.js frontend)
 
 ### 2. Clone and Setup Environment
 ```bash
@@ -91,32 +102,44 @@ cp .env.example .env
 docker compose up -d
 ```
 
-### 4. Pull Local AI Models
+### 4. Pull Local AI Models in Ollama
 ```bash
-# Pull conversation LLM
 docker exec -it lunaris_ollama ollama pull llama3.3
-
-# Pull embedding model for RAG
 docker exec -it lunaris_ollama ollama pull nomic-embed-text
 ```
 
 ### 5. Install Dependencies
 ```bash
+# Python Backend
 pip install -r requirements.txt
+
+# Next.js Frontend
+cd frontend
+npm install
+cd ..
 ```
 
-### 6. Run Ingestion / Watcher
-```bash
-# Option A: Ingest all files in ./documents/ once
-python rag_ingest.py
+### 6. Run Components
 
-# Option B: Run live folder watcher daemon
+**Start FastAPI Gateway:**
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**Start Next.js Web App:**
+```bash
+cd frontend
+npm run dev
+```
+
+**Start Live Document Watcher (Optional):**
+```bash
 python watcher.py
 ```
 
-### 7. Start the Lunaris Gateway
+**Start Telegram Bot (Optional):**
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+python telegram_bot.py
 ```
 
 ---
@@ -125,63 +148,11 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 | Service | URL | Description |
 | :--- | :--- | :--- |
-| **OpenWebUI** | `http://localhost:3000` | Interactive Chat Web Interface |
+| **Lunaris Next.js Web App** | `http://localhost:3001` | Dedicated Sovereign Web Dashboard |
 | **FastAPI Swagger Docs** | `http://localhost:8000/docs` | Interactive REST API Documentation |
+| **OpenWebUI** | `http://localhost:3000` | Alternative Chat Web Interface |
 | **SearXNG Search** | `http://localhost:8080` | Local Private Metasearch Engine |
 | **Ollama API** | `http://localhost:11434` | Raw Local LLM Inference Engine |
-
----
-
-## 📡 API Reference
-
-### 1. Autonomous ReAct Reasoning
-`POST /api/v1/agent/react`
-```json
-{
-  "prompt": "Look up our Q1 cost savings in company_metrics.csv and calculate the square root of that amount.",
-  "session_id": "optional-uuid-string",
-  "max_iterations": 5
-}
-```
-
-*Response includes complete step-by-step reasoning:*
-```json
-{
-  "session_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-  "query": "Look up our Q1 cost savings...",
-  "response": "The Q1 cost savings for Engineering was $45,000, and the square root is approximately 212.13.",
-  "reasoning_steps": [
-    {
-      "step": 1,
-      "action": "search_documents",
-      "action_input": "Q1 cost saved company metrics",
-      "observation": "[1] Source: 'company_metrics' ... CostSavedUSD: 45000"
-    },
-    {
-      "step": 2,
-      "action": "calculate_math",
-      "action_input": "sqrt(45000)",
-      "observation": "Result: 212.13203435596424"
-    }
-  ],
-  "total_steps": 2
-}
-```
-
-### 2. Direct Multipart Document Upload
-`POST /api/v1/documents/upload`
-Uploads and indexes any PDF, DOCX, CSV, TXT, or Code file immediately.
-
-### 3. List All Indexed Documents
-`GET /api/v1/documents/list`
-
-### 4. Sandboxed Code Execution
-`POST /api/v1/sandbox/execute`
-```json
-{
-  "code": "import math\nprint(f'Calculated: {math.sqrt(256)}')"
-}
-```
 
 ---
 
