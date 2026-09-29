@@ -6,7 +6,7 @@
 [![Ollama](https://img.shields.io/badge/Ollama-Local_Inference-black.svg)](https://ollama.com/)
 [![pgvector](https://img.shields.io/badge/pgvector-PostgreSQL-336791.svg?logo=postgresql)](https://github.com/pgvector/pgvector)
 
-**Lunaris AI** is a fully sovereign, self-hosted, private intelligence system designed with zero external cloud dependencies. It unifies local Large Language Models (LLMs), high-speed vector retrieval with `pgvector`, private internet metasearch with SearXNG, ephemeral sandboxed code execution, and an out-of-the-box conversational interface.
+**Lunaris AI** is a fully sovereign, self-hosted, private intelligence platform designed with zero external cloud dependencies. It unifies local Large Language Models (LLMs), high-speed vector retrieval with `pgvector`, autonomous ReAct multi-step tool reasoning, live document folder monitoring, private internet metasearch with SearXNG, and ephemeral sandboxed code execution.
 
 ---
 
@@ -14,19 +14,24 @@
 
 ```mermaid
 graph TD
-    Client["Client Interface (OpenWebUI / FastAPI Swagger / App)"] --> Gateway["FastAPI Gateway (main.py)"]
+    Client["Client Interface (OpenWebUI / FastAPI Swagger / Custom App)"] --> Gateway["FastAPI Gateway (main.py)"]
     Gateway --> Auth["Bearer Token Auth Guardrail"]
-    Gateway --> Orchestrator["Lunaris Agent Engine (lunaris_core.py)"]
-
-    subgraph Sovereign Core Services
-        Orchestrator -->|Inference & Embeddings| Ollama["Ollama (Llama 3.3 / nomic-embed-text)"]
-        Orchestrator -->|Vector Similarity & Memory| Postgres["PostgreSQL + pgvector (init.sql)"]
-        Orchestrator -->|Private Metasearch| SearXNG["SearXNG Metasearch"]
-        Orchestrator -->|Safe Code Evaluation| Sandbox["Docker Sandbox (sandbox.py)"]
+    Gateway --> ReActAgent["Autonomous ReAct Agent (lunaris_core.py)"]
+    
+    subgraph ReAct Loop (Thought -> Action -> Observation)
+        ReActAgent -->|1. Vector Search| ToolDoc["search_documents (pgvector)"]
+        ReActAgent -->|2. Web Metasearch| ToolWeb["web_search (SearXNG)"]
+        ReActAgent -->|3. Sandboxed Eval| ToolCode["execute_python_sandbox (Docker)"]
+        ReActAgent -->|4. Arithmetic| ToolMath["calculate_math"]
+        ReActAgent -->|5. Memory / Stats| ToolList["list_knowledge_base"]
     end
 
-    Ingest["RAG Ingestion Pipeline (rag_ingest.py)"] -->|Chunk & Embed| Ollama
-    Ingest -->|Vector Store| Postgres
+    subgraph Document Ingestion Pipeline
+        Watcher["Live Folder Watcher (watcher.py)"] -->|Watches ./documents/| Ingest["Multi-Format Parser (rag_ingest.py)"]
+        Ingest -->|PDF, DOCX, CSV, MD, Code| Chunker["Semantic Chunker"]
+        Chunker -->|Vector Embeddings| Ollama["Ollama (nomic-embed-text)"]
+        Chunker -->|HNSW Cosine Index| Postgres["PostgreSQL 16 + pgvector"]
+    end
 ```
 
 ---
@@ -34,11 +39,13 @@ graph TD
 ## 🚀 Key Features
 
 - **🛡️ 100% Data Sovereignty**: All inference, embedding, and vector storage run locally on your hardware.
-- **⚡ Local Vector RAG**: Fast Approximate Nearest Neighbor search using PostgreSQL `pgvector` and HNSW indexing.
+- **🤖 Autonomous ReAct Reasoning**: Multi-step Thought $\rightarrow$ Action $\rightarrow$ Observation reasoning loop capable of using multiple tools in sequence.
+- **📂 Multi-Format Ingestion Engine**: Native parsing and chunking for **PDF, DOCX, CSV, JSON, Markdown, Text, and source code files**.
+- **👁️ Live Folder Watcher**: Background daemon that continuously watches `./documents/`, automatically detecting additions, modifications, and deletions.
+- **⚡ Local Vector RAG**: Fast Approximate Nearest Neighbor search using PostgreSQL `pgvector` with HNSW cosine distance indexing and SHA-256 deduplication.
 - **🔍 Privacy-Preserving Metasearch**: Real-time web groundings via self-hosted SearXNG without user tracking.
-- **🔒 Isolated Code Execution**: Air-gapped, resource-capped Docker sandboxing for agent-executed Python scripts.
-- **💬 Dual Frontend Integration**: Ready to connect with OpenWebUI or custom Next.js/React frontends.
-- **🔑 Production API Gateway**: Token-authenticated REST API with OpenAPI documentation.
+- **🔒 Air-Gapped Code Sandbox**: Resource-capped, non-networked Docker container execution for untrusted Python code.
+- **🔑 Production API Gateway**: Token-authenticated REST API with OpenAPI documentation and multipart document uploads.
 
 ---
 
@@ -46,14 +53,19 @@ graph TD
 
 ```
 lunaris-ai/
+├── documents/             # Drop zone for auto-ingested documents (PDF, DOCX, CSV, MD, Code)
+│   ├── sample_architecture.md
+│   ├── company_metrics.csv
+│   └── sample_python_code.py
 ├── docker-compose.yml     # Complete container stack (Ollama, pgvector, SearXNG, OpenWebUI)
 ├── init.sql               # Database schema with pgvector & conversation memory
-├── lunaris_core.py        # Central AI agent engine & autonomous context router
+├── lunaris_core.py        # Central Autonomous ReAct reasoning engine
+├── agent_tools.py         # Registry of agent tools (vector search, web search, sandbox, math)
 ├── sandbox.py             # Docker-based isolated code execution sandbox
-├── rag_ingest.py          # Document chunking & vector indexing pipeline
+├── rag_ingest.py          # Multi-format document parser & vector ingestion pipeline
+├── watcher.py             # Live folder watcher daemon for real-time document indexing
 ├── main.py                # FastAPI production REST gateway
 ├── requirements.txt       # Python dependencies
-├── sample_knowledge.txt   # Example document for RAG testing
 ├── .env.example           # Environment configuration template
 └── README.md              # Project documentation
 ```
@@ -88,15 +100,21 @@ docker exec -it lunaris_ollama ollama pull llama3.3
 docker exec -it lunaris_ollama ollama pull nomic-embed-text
 ```
 
-### 5. Install Dependencies & Ingest Knowledge Base
+### 5. Install Dependencies
 ```bash
 pip install -r requirements.txt
-
-# Ingest sample knowledge into pgvector
-python rag_ingest.py
 ```
 
-### 6. Start the Lunaris Gateway
+### 6. Run Ingestion / Watcher
+```bash
+# Option A: Ingest all files in ./documents/ once
+python rag_ingest.py
+
+# Option B: Run live folder watcher daemon
+python watcher.py
+```
+
+### 7. Start the Lunaris Gateway
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
@@ -116,31 +134,52 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 ## 📡 API Reference
 
-### Chat & Reasoning Endpoint
-`POST /api/v1/chat`
+### 1. Autonomous ReAct Reasoning
+`POST /api/v1/agent/react`
 ```json
 {
-  "prompt": "What are the core capabilities of Lunaris AI?",
+  "prompt": "Look up our Q1 cost savings in company_metrics.csv and calculate the square root of that amount.",
   "session_id": "optional-uuid-string",
-  "use_web": false,
-  "use_docs": true
+  "max_iterations": 5
 }
 ```
 
-### Sandboxed Code Execution
+*Response includes complete step-by-step reasoning:*
+```json
+{
+  "session_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "query": "Look up our Q1 cost savings...",
+  "response": "The Q1 cost savings for Engineering was $45,000, and the square root is approximately 212.13.",
+  "reasoning_steps": [
+    {
+      "step": 1,
+      "action": "search_documents",
+      "action_input": "Q1 cost saved company metrics",
+      "observation": "[1] Source: 'company_metrics' ... CostSavedUSD: 45000"
+    },
+    {
+      "step": 2,
+      "action": "calculate_math",
+      "action_input": "sqrt(45000)",
+      "observation": "Result: 212.13203435596424"
+    }
+  ],
+  "total_steps": 2
+}
+```
+
+### 2. Direct Multipart Document Upload
+`POST /api/v1/documents/upload`
+Uploads and indexes any PDF, DOCX, CSV, TXT, or Code file immediately.
+
+### 3. List All Indexed Documents
+`GET /api/v1/documents/list`
+
+### 4. Sandboxed Code Execution
 `POST /api/v1/sandbox/execute`
 ```json
 {
-  "code": "import math\nprint(f'Calculated root: {math.sqrt(256)}')"
-}
-```
-
-### Document Ingestion
-`POST /api/v1/documents/ingest`
-```json
-{
-  "file_path": "sample_knowledge.txt",
-  "title": "Lunaris Architecture"
+  "code": "import math\nprint(f'Calculated: {math.sqrt(256)}')"
 }
 ```
 
