@@ -12,10 +12,19 @@ venv/
 .venv/
 env/
 
+# Node.js & Next.js builds
+node_modules/
+frontend/node_modules/
+frontend/.next/
+.next/
+*.tsbuildinfo
+next-env.d.ts
+
 # Docker volumes & data
 postgres_data/
 ollama_data/
 open_webui_data/
+voice_cache/
 output.png
 
 # IDE & OS files
