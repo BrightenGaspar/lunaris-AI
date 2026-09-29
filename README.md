@@ -2,12 +2,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
+[![Flask](https://img.shields.io/badge/Flask-3.0.0-black.svg?logo=flask)](https://flask.palletsprojects.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-Auth_OTP-3ECF8E.svg?logo=supabase)](https://supabase.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black.svg?logo=next.js)](https://nextjs.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker)](https://www.docker.com/)
 [![Ollama](https://img.shields.io/badge/Ollama-Local_Inference-black.svg)](https://ollama.com/)
 [![pgvector](https://img.shields.io/badge/pgvector-PostgreSQL-336791.svg?logo=postgresql)](https://github.com/pgvector/pgvector)
 
-**Lunaris AI** is a sovereign, self-hosted, private intelligence platform designed with zero external cloud dependencies. It unifies local Large Language Models (LLMs), high-speed vector retrieval with `pgvector`, autonomous ReAct multi-step tool reasoning, live document folder monitoring, air-gapped voice interaction (Whisper + TTS), Telegram & Discord connectors, and a dedicated Next.js web application.
+**Lunaris AI** is a sovereign, self-hosted, private intelligence platform designed with zero external cloud dependencies. It unifies local Large Language Models (LLMs), high-speed vector retrieval with `pgvector`, autonomous ReAct multi-step tool reasoning, live document folder monitoring, air-gapped voice interaction (Whisper + TTS), Telegram & Discord connectors, and a secure Supabase Email OTP authentication portal.
 
 ---
 
@@ -15,8 +17,11 @@
 
 ```mermaid
 graph TD
-    User["Client Interfaces (Next.js Dashboard / Telegram / Discord)"] --> Gateway["FastAPI Gateway (main.py)"]
-    Gateway --> Auth["Bearer Token Auth Guardrail"]
+    User["User Client"] --> AuthPortal["Flask + Supabase Auth Portal (auth_app.py)"]
+    AuthPortal -->|Email OTP Verification| Supabase["Supabase Auth Service"]
+    AuthPortal -->|Authenticated Access| NextApp["Next.js Web Dashboard (Port 3001)"]
+    
+    NextApp --> Gateway["FastAPI Gateway (main.py)"]
     Gateway --> ReActAgent["Autonomous ReAct Agent (lunaris_core.py)"]
     
     subgraph ReAct Tool Execution Loop
@@ -41,7 +46,8 @@ graph TD
 
 ## 🚀 Complete Feature Set
 
-- **🛡️ 100% Data Sovereignty**: All inference, embedding, voice, and vector storage run completely offline on your hardware.
+- **🛡️ 100% Data Sovereignty**: All inference, embedding, voice, and vector storage run offline on your hardware.
+- **🔐 Supabase Email OTP Auth**: Secure passwordless login portal with custom planet glassmorphism UI.
 - **🎨 Dedicated Next.js Web App**: Dark celestial dashboard with real-time reasoning trace accordions, document manager, sandbox terminal, and voice mic.
 - **🤖 Autonomous ReAct Reasoning**: Multi-step Thought $\rightarrow$ Action $\rightarrow$ Observation reasoning loop capable of chaining multiple tools in sequence.
 - **🎙️ Air-Gapped Voice (STT & TTS)**: Talk to Lunaris via microphone and receive natural synthesized speech responses offline.
@@ -57,14 +63,10 @@ graph TD
 
 ```
 lunaris-ai/
+├── auth_app.py            # Flask + Supabase Email OTP authentication portal
+├── supabase_email_template.html # Supabase Email OTP customization template
 ├── frontend/              # Dedicated Next.js & Tailwind CSS Web Application
-│   ├── app/               # App Router & page layout
-│   ├── components/        # UI components (ReasoningTrace, DocumentManager, SandboxRunner, VoiceRecorder)
-│   └── package.json
 ├── documents/             # Drop zone for auto-ingested documents (PDF, DOCX, CSV, MD, Code)
-│   ├── sample_architecture.md
-│   ├── company_metrics.csv
-│   └── sample_python_code.py
 ├── docker-compose.yml     # Container stack (Ollama, pgvector, SearXNG, OpenWebUI)
 ├── init.sql               # Database schema with pgvector & conversation memory
 ├── lunaris_core.py        # Central Autonomous ReAct reasoning engine
@@ -85,74 +87,43 @@ lunaris-ai/
 
 ## ⚡ Getting Started
 
-### 1. Prerequisites
-- [Docker](https://docs.docker.com/get-docker/) & Docker Compose
-- [Python 3.10+](https://www.python.org/)
-- [Node.js 18+](https://nodejs.org/) (for custom Next.js frontend)
-
-### 2. Clone and Setup Environment
+### 1. Setup Environment
 ```bash
 git clone https://github.com/BrightenGaspar/Lunaris-AI.git
 cd Lunaris-AI
 cp .env.example .env
 ```
 
-### 3. Launch Docker Services
+### 2. Launch Docker Services
 ```bash
 docker compose up -d
 ```
 
-### 4. Pull Local AI Models in Ollama
+### 3. Install Dependencies
 ```bash
-docker exec -it lunaris_ollama ollama pull llama3.3
-docker exec -it lunaris_ollama ollama pull nomic-embed-text
-```
-
-### 5. Install Dependencies
-```bash
-# Python Backend
 pip install -r requirements.txt
-
-# Next.js Frontend
-cd frontend
-npm install
-cd ..
 ```
 
-### 6. Run Components
+### 4. Run Services
+
+**Start Supabase Auth Portal:**
+```bash
+python auth_app.py
+# Access at http://127.0.0.1:5000
+```
 
 **Start FastAPI Gateway:**
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-**Start Next.js Web App:**
+**Start Next.js Frontend:**
 ```bash
 cd frontend
+npm install
 npm run dev
+# Access at http://localhost:3001
 ```
-
-**Start Live Document Watcher (Optional):**
-```bash
-python watcher.py
-```
-
-**Start Telegram Bot (Optional):**
-```bash
-python telegram_bot.py
-```
-
----
-
-## 🌐 Service Endpoints
-
-| Service | URL | Description |
-| :--- | :--- | :--- |
-| **Lunaris Next.js Web App** | `http://localhost:3001` | Dedicated Sovereign Web Dashboard |
-| **FastAPI Swagger Docs** | `http://localhost:8000/docs` | Interactive REST API Documentation |
-| **OpenWebUI** | `http://localhost:3000` | Alternative Chat Web Interface |
-| **SearXNG Search** | `http://localhost:8080` | Local Private Metasearch Engine |
-| **Ollama API** | `http://localhost:11434` | Raw Local LLM Inference Engine |
 
 ---
 
